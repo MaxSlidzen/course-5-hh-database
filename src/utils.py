@@ -1,5 +1,6 @@
 import requests
 import psycopg2
+import time
 
 
 def get_employers_ids(employers: list) -> list:
@@ -9,7 +10,7 @@ def get_employers_ids(employers: list) -> list:
     :return: Список с id компаний из списка с названиями
     """
     # Итерация по списку с названиями
-    start_employers_ids = []
+    employers_ids = []
     for employer_name in employers:
         response = requests.get('https://api.hh.ru/employers',
                                 params={'text': {employer_name}})
@@ -24,10 +25,10 @@ def get_employers_ids(employers: list) -> list:
                 needed_employer = employer
                 open_vacancies = employer['open_vacancies']
 
-        # Добавление id компании в список
-        start_employers_ids.append(needed_employer['id'])
+        # Добавление компании в список
+        employers_ids.append(needed_employer['id'])
 
-    return start_employers_ids
+    return employers_ids
 
 
 def to_strip_date(date_str: str):
@@ -55,30 +56,106 @@ def get_hh_salary(raw_vacancy: dict) -> int:
     return raw_vacancy["salary"]["from"]
 
 
-def get_hh_vacancies_params(raw_vacancy: dict) -> list:
-    """
-    Возвращает параметры для вакансий HH
+def get_hh_data(employers_names):
+    data = {}
+    data['areas'] = get_areas_data()
+    data['currencies'] = get_currencies_data()
+    data['industries'] = get_industries_data()
+    employers_ids = get_employers_ids(employers_names)
+    data['employers'] = get_employers_data(employers_ids)
+    data['vacancies'] = []
+    for employer in data['employers']:
+        data['vacancies'].extend(get_vacancies_data(employer))
 
-    :param raw_vacancy: "сырой" словарь с данными о вакансии HH
-    :return: параметры для вакансий HH
-    """
-    salary = get_hh_salary(raw_vacancy)
-    if salary > 0:
-        currency = raw_vacancy["salary"]["currency"]
-    else:
-        currency = ""
+    return data
 
-    return [
-        raw_vacancy["id"],
-        raw_vacancy["name"],
-        raw_vacancy["employer"]['id'],
-        raw_vacancy["employer"]['name'],
-        raw_vacancy["alternate_url"],
-        raw_vacancy["area"]["name"],
-        salary,
-        currency,
-        to_strip_date(raw_vacancy["published_at"])
-    ]
+
+def get_employers_data(employers_ids: list) -> list[dict]:
+    employers_data = []
+    for employer_id in employers_ids:
+        response = requests.get(f'https://api.hh.ru/employers/{employer_id}')
+        employer_data = response.json()
+        employers_data.append(employer_data)
+
+    return employers_data
+
+
+def get_vacancies_data(employer):
+    page = 0
+    vacancies_data = []
+
+    while True:
+        response = requests.get(employer['vacancies_url'],
+                                params={'page': page,
+                                        'per_page': 100})
+        vacancies = response.json()['items']
+        for vacancy in vacancies:
+            vacancies_data.append(vacancy)
+
+        # Поскольку 0-я страница тоже считается за страницу,
+        # то сначала прибавляем страницу, а затем проверяем ограничения
+        page += 1
+        # Пауза для обхода капчи
+        time.sleep(0.5)
+
+        # Ограничение по количеству страниц вакансий и учет ограничения для глубины пагинации HH API
+        if page == response.json()['pages'] or len(vacancies_data) == 2000:
+            break
+
+    return vacancies_data
+
+
+def get_areas_data():
+    response = requests.get('https://api.hh.ru/areas')
+    areas_data = []
+    areas = response.json()
+    for country in areas:
+        country_name = country['name']
+        regions = country['areas']
+        for region in regions:
+            region_name = region['name']
+            cities = region['areas']
+            for city in cities:
+                areas_data.append(
+                    {
+                        'id': city['id'],
+                        'name': city['name'],
+                        'region': region_name,
+                        'country': country_name
+                    }
+                )
+    return areas_data
+
+
+def get_currencies_data():
+    response = requests.get('https://api.hh.ru/dictionaries')
+    currencies_data = []
+    currencies = response.json()['currency']
+    for currency in currencies:
+        currencies_data.append(
+            {
+                'currency_code': currency['code'],
+                'currency_name': currency['name'],
+                'currency_rate': currency['rate']
+            }
+        )
+
+    return currencies_data
+
+
+def get_industries_data():
+    industries_data = []
+    response = requests.get('https://api.hh.ru/industries')
+    industries = response.json()
+    for industry in industries:
+        for subindustry in industry['industries']:
+            industries_data.append(
+                {
+                    'id': subindustry['id'],
+                    'name': subindustry['name']
+                }
+            )
+    return industries_data
 
 
 def create_database(database_name: str, params: dict) -> None:
