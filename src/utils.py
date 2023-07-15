@@ -176,14 +176,44 @@ def create_database(database_name: str, params: dict) -> None:
     conn = psycopg2.connect(dbname=database_name, **params)
     with conn.cursor() as cur:
         cur.execute("""
+                    CREATE TABLE areas
+                    (
+                        city_id INTEGER PRIMARY KEY,
+                        city VARCHAR NOT NULL UNIQUE,
+                        region VARCHAR NOT NULL,
+                        country VARCHAR NOT NULL
+                    )
+                    """)
+
+    with conn.cursor() as cur:
+        cur.execute("""
+                    CREATE TABLE industries
+                    (
+                        industry_id REAL PRIMARY KEY,
+                        name VARCHAR NOT NULL
+                    )
+                    """)
+
+    with conn.cursor() as cur:
+        cur.execute("""
+                    CREATE TABLE currencies
+                    (
+                        code varchar(3) PRIMARY KEY,
+                        name VARCHAR(20) NOT NULL,
+                        rate real
+                    )
+                    """)
+
+    with conn.cursor() as cur:
+        cur.execute("""
                     CREATE TABLE employers 
                     (
                         employer_id INTEGER PRIMARY KEY,
                         accredited_IT VARCHAR(3) NOT NULL,
-                        employer_name VARCHAR(50) NOT NULL,
+                        employer_name VARCHAR(50) NOT NULL UNIQUE,
                         employer_site VARCHAR,
                         employer_hh_link VARCHAR NOT NULL,
-                        industries VARCHAR,
+                        industry REAL REFERENCES industries(industry_id),
                         open_vacancies INTEGER NOT NULL
                     )
                     """)
@@ -197,10 +227,10 @@ def create_database(database_name: str, params: dict) -> None:
                         employer_id INTEGER REFERENCES employers(employer_id),
                         employer_name VARCHAR REFERENCES employers(employer_name),
                         vacancy_link VARCHAR NOT NULL,
-                        area VARCHAR NOT NULL,
+                        area VARCHAR REFERENCES areas(city),
                         salary INTEGER,
                         currency VARCHAR,
-                        published DATE NOT NULL,
+                        published DATE NOT NULL
                     )
                     """)
     conn.commit()
