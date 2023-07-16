@@ -34,7 +34,7 @@ def to_strip_date(date_str: str):
     """
     Возвращает дату публикации без указания времени
 
-    :param date_str:
+    :param date_str: дата в исходном формате
     :return: дата в формате гггг-мм-дд
     """
     stripped_date = date_str.split("T")[0]
@@ -110,9 +110,25 @@ def get_areas_data():
     areas = response.json()
     for country in areas:
         country_name = country['name']
+        areas_data.append(
+            {
+                'id': country['id'],
+                'name': None,
+                'region': None,
+                'country': country_name
+            }
+        )
         regions = country['areas']
         for region in regions:
             region_name = region['name']
+            areas_data.append(
+                {
+                    'id': region['id'],
+                    'name': None,
+                    'region': region_name,
+                    'country': country_name
+                }
+            )
             cities = region['areas']
             for city in cities:
                 areas_data.append(
