@@ -1,4 +1,6 @@
 import psycopg2
+from typing import Any
+from src.hh_data_utils import get_hh_salary, to_strip_date
 
 
 def create_database(database_name: str, params: dict) -> None:
@@ -22,8 +24,8 @@ def create_database(database_name: str, params: dict) -> None:
                     CREATE TABLE areas
                     (
                         city_id INTEGER PRIMARY KEY,
-                        city VARCHAR NOT NULL UNIQUE,
-                        region VARCHAR NOT NULL,
+                        city VARCHAR,
+                        region VARCHAR,
                         country VARCHAR NOT NULL
                     )
                     """)
@@ -53,7 +55,7 @@ def create_database(database_name: str, params: dict) -> None:
                     CREATE TABLE employers 
                     (
                         employer_id INTEGER PRIMARY KEY,
-                        accredited_IT VARCHAR(3) NOT NULL,
+                        accredited_IT BOOLEAN,
                         employer_name VARCHAR(50) NOT NULL UNIQUE,
                         employer_site VARCHAR,
                         employer_hh_link VARCHAR NOT NULL,
@@ -67,11 +69,11 @@ def create_database(database_name: str, params: dict) -> None:
                     CREATE TABLE vacancies
                     (
                         vacancy_id INTEGER PRIMARY KEY,
-                        vacancy_name INTEGER NOT NULL,
+                        vacancy_name VARCHAR NOT NULL,
                         employer_id INTEGER REFERENCES employers(employer_id),
                         employer_name VARCHAR REFERENCES employers(employer_name),
                         vacancy_link VARCHAR NOT NULL,
-                        area VARCHAR REFERENCES areas(city),
+                        area_id INTEGER REFERENCES areas(city_id),
                         salary INTEGER,
                         currency VARCHAR,
                         published DATE NOT NULL
