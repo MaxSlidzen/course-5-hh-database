@@ -79,3 +79,79 @@ def create_database(database_name: str, params: dict) -> None:
                     """)
     conn.commit()
     conn.close()
+
+
+def save_data_to_database(data: dict[str, list[dict[str, Any]]], database_name: str, params: dict) -> None:
+    """
+    Сохранение данных c HH в базу данных
+    :param data: словарь с данными
+    :param database_name: название БД для HH
+    :param params: параметры для входа в БД
+    :return:
+    """
+    conn = psycopg2.connect(dbname=database_name, **params)
+    with conn.cursor() as cur:
+        for area in data['areas']:
+            cur.execute(
+                """
+                INSERT INTO areas (city_id, city, region, country)
+                VALUES (%s, %s, %s, %s)
+                """,
+                (int(area['id']), area['name'], area['region'], area['country'])
+            )
+
+        for currency in data['currencies']:
+            cur.execute(
+                """
+                INSERT INTO currencies (code, name, rate)
+                VALUES (%s, %s, %s)
+                """,
+                (currency['currency_code'], currency['currency_name'], currency['currency_rate'])
+            )
+
+        for industry in data['industries']:
+            cur.execute(
+                """
+                INSERT INTO industries (industry_id, name)
+                VALUES (%s, %s)
+                """,
+                (float(industry['id']), industry['name'])
+            )
+
+        for employer in data['employers']:
+            cur.execute(
+                """
+                INSERT INTO employers (employer_id, accredited_IT, employer_name,
+                employer_site, employer_hh_link, industry, open_vacancies)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """,
+                (int(employer['id']), employer['accredited_it_employer'],
+                 employer['name'], employer['site_url'], employer['vacancies_url'],
+                 float(employer['industries'][0]['id']), employer['open_vacancies'])
+            )
+
+        for vacancy in data['vacancies']:
+
+            salary = get_hh_salary(vacancy)
+
+            if salary > 0:
+                currency = vacancy["salary"]['currency']
+            else:
+                currency = None
+
+            published = to_strip_date(vacancy["published_at"])
+
+            cur.execute(
+                """
+                INSERT INTO vacancies (vacancy_id, vacancy_name, employer_id, employer_name,
+                vacancy_link, area_id, salary, currency , published)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (int(vacancy['id']), vacancy['name'],
+                 int(vacancy['employer']['id']), vacancy['employer']['name'],
+                 vacancy['alternate_url'], int(vacancy['area']['id']), salary,
+                 currency, published)
+            )
+
+    conn.commit()
+    conn.close()
