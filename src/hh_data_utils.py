@@ -89,7 +89,13 @@ def get_vacancies_data(employer):
                                         'per_page': 100})
         vacancies = response.json()['items']
         for vacancy in vacancies:
-            vacancies_data.append(vacancy)
+
+            # Исключаем возможное дублирование вакансий в случае добавления новых вакансий на сайт
+            # в момент работы программы и, соответственно, смещения вакансий в ответе на запросы
+            if vacancy not in vacancies_data:
+                vacancies_data.append(vacancy)
+            else:
+                continue
 
         # Поскольку 0-я страница тоже считается за страницу,
         # то сначала прибавляем страницу, а затем проверяем ограничения
