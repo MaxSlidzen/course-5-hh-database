@@ -15,6 +15,8 @@ def main():
     create_database('hh_database', params)
     save_data_to_database(hh_data, 'hh_database', params)
 
+    del hh_data
+
 
 if __name__ == '__main__':
     start_time = time.time()
