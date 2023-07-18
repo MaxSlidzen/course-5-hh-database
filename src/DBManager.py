@@ -33,7 +33,7 @@ class DBManager(Manager):
     Класс для работы с БД postgres
     """
 
-    def __init__(self, db_name, **params):
+    def __init__(self, db_name, params):
         """
         Инициализация объекта
         :param db_name: название базы данных для работы
@@ -124,7 +124,7 @@ class DBManager(Manager):
         :return: все вакансии с з/п больше средней
         """
         conn = psycopg2.connect(dbname=self.db_name, **self.params)
-        avg_salary = self.get_avg_salary()
+        avg_salary = self.get_avg_salary()[1]
         try:
             with conn.cursor() as cur:
                 cur.execute(f"""
@@ -152,7 +152,7 @@ class DBManager(Manager):
             with conn.cursor() as cur:
                 cur.execute(f"""
                             SELECT employer_name, vacancy_name, salary, currency, 
-                            vacancy_link FROM vacancies FROM vacancies
+                            vacancy_link FROM vacancies
                             WHERE vacancy_name LIKE '%{keyword}%'
                             """)
                 data = cur.fetchall()
