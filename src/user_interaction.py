@@ -34,8 +34,7 @@ def user_interaction():
             print_vacancies(data)
         elif user_input == "5":
             count = 0
-            user_input = input("Ввод чувствителен к регистру.\n"
-                               "Введите ключевое слово :")
+            user_input = f'%{input("Введите ключевое слово :")}%'
             data = db_manager.get_vacancies_with_keyword(user_input)
             print_vacancies(data)
         elif user_input == '0':

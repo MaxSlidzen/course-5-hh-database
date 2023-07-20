@@ -41,7 +41,7 @@ class DBManager(Manager):
         """
         self.params = params
         self.db_name = db_name
-        self.error_msg = 'Возникла ошибка. Работа программы продолжится'
+        self.error_msg = 'Возникла ошибка!'
 
     def get_companies_and_vacancies_count(self) -> list:
         """
@@ -127,11 +127,12 @@ class DBManager(Manager):
         avg_salary = self.get_avg_salary()[1]
         try:
             with conn.cursor() as cur:
-                cur.execute(f"""
+                cur.execute("""
                             SELECT employer_name, vacancy_name, salary, currency, vacancy_link FROM vacancies
                             JOIN currencies ON vacancies.currency = currencies.code
-                            WHERE (vacancies.salary / currencies.rate) > {avg_salary}
-                            """)
+                            WHERE (vacancies.salary / currencies.rate) > %s
+                            """,
+                            (avg_salary,))
                 data = cur.fetchall()
 
         except Exception:
@@ -150,11 +151,13 @@ class DBManager(Manager):
         conn = psycopg2.connect(dbname=self.db_name, **self.params)
         try:
             with conn.cursor() as cur:
-                cur.execute(f"""
+                cur.execute("""
                             SELECT employer_name, vacancy_name, salary, currency, 
                             vacancy_link FROM vacancies
-                            WHERE vacancy_name LIKE '%{keyword}%'
-                            """)
+                            WHERE vacancy_name LIKE %s OR vacancy_name LIKE %s
+                            """,
+                            (keyword.lower(), keyword.title())
+                            )
                 data = cur.fetchall()
 
         except Exception:
